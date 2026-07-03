@@ -313,10 +313,16 @@ function renderMapa(){
   const sec = document.getElementById('mapa');
   const pts = DATA.mapa_unidades || [];
   const skippedCount = DATA.cobertura.length - pts.length;
+  const norm = s => (s||'').normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase();
   sec.innerHTML = `
     <h2>Mapa da Rede</h2>
     <p class="subtitle">${pts.length} de ${DATA.cobertura.length} municípios com franqueado geocodificados${skippedCount>0?` — ${skippedCount} registro(s) com nome de município inválido na base não foram plotados`:''}.</p>
     <div class="card">
+      <div class="controls" style="margin-bottom:14px">
+        <input type="text" id="busca-municipio" list="lista-municipios" placeholder="Buscar município...">
+        <datalist id="lista-municipios">${pts.map(p=>`<option value="${p['Município']} — ${p.UF}">`).join('')}</datalist>
+        <span class="count" id="busca-count"></span>
+      </div>
       <div id="map-rede"></div>
       <div class="map-legend">
         <label style="cursor:pointer"><input type="checkbox" id="filtro-ativa" checked><span class="dot" style="background:#927245"></span>Maioria ativa</label>
@@ -333,10 +339,7 @@ function renderMapa(){
     subdomains: 'abcd', maxZoom: 19,
   }).addTo(map);
 
-  const grupoAtivo = L.layerGroup().addTo(map);
-  const grupoInativo = L.layerGroup().addTo(map);
-
-  pts.forEach(p=>{
+  const allMarkers = pts.map(p=>{
     const total = p['Total Unid.'] || 0;
     const ativos = p['Ativos'] || 0;
     const majorityAtivo = ativos >= (p['Inativos']||0);
@@ -344,21 +347,47 @@ function renderMapa(){
     const marker = L.circleMarker([p.lat, p.lon], {
       radius, weight:1, color:'#322E2B', fillColor: majorityAtivo ? '#927245' : '#828384',
       fillOpacity:.82,
-    });
+    }).addTo(map);
     marker.bindPopup(`
       <div class="popup-title">${p['Município']} — ${p.UF}</div>
       <div class="popup-row">Ativos: <b>${FMT.int(ativos)}</b> · Inativos: <b>${FMT.int(p['Inativos'])}</b> · Total: <b>${FMT.int(total)}</b></div>
       <div class="popup-row">% da rede: ${FMT.pct(p['% do Total Rede'])} · PIB 2025: ${FMT.bi(p['PIB 2025'])}</div>
     `);
-    marker.addTo(majorityAtivo ? grupoAtivo : grupoInativo);
+    return {marker, lat:p.lat, lon:p.lon, majorityAtivo, key: norm(`${p['Município']} ${p.UF}`)};
   });
 
-  sec.querySelector('#filtro-ativa').addEventListener('change', e=>{
-    if(e.target.checked) map.addLayer(grupoAtivo); else map.removeLayer(grupoAtivo);
-  });
-  sec.querySelector('#filtro-inativa').addEventListener('change', e=>{
-    if(e.target.checked) map.addLayer(grupoInativo); else map.removeLayer(grupoInativo);
-  });
+  const searchInput = sec.querySelector('#busca-municipio');
+  const countEl = sec.querySelector('#busca-count');
+  const filtroAtiva = sec.querySelector('#filtro-ativa');
+  const filtroInativa = sec.querySelector('#filtro-inativa');
+
+  function applyMapFilters(){
+    const q = norm(searchInput.value.trim());
+    const visible = [];
+    allMarkers.forEach(m=>{
+      const matchesSearch = !q || m.key.includes(q);
+      const matchesStatus = m.majorityAtivo ? filtroAtiva.checked : filtroInativa.checked;
+      const show = matchesSearch && matchesStatus;
+      if(show){ if(!map.hasLayer(m.marker)) m.marker.addTo(map); visible.push(m); }
+      else if(map.hasLayer(m.marker)) map.removeLayer(m.marker);
+    });
+    if(q){
+      countEl.textContent = `${visible.length} município(s) encontrado(s)`;
+      if(visible.length===1){
+        map.setView([visible[0].lat, visible[0].lon], 10);
+        visible[0].marker.openPopup();
+      } else if(visible.length>1){
+        map.fitBounds(L.latLngBounds(visible.map(v=>[v.lat,v.lon])), {padding:[30,30]});
+      }
+    } else {
+      countEl.textContent = '';
+      map.setView([-14.2, -51.9], 4);
+    }
+  }
+
+  searchInput.addEventListener('input', applyMapFilters);
+  filtroAtiva.addEventListener('change', applyMapFilters);
+  filtroInativa.addEventListener('change', applyMapFilters);
 }
 
 /* ---------- Cobertura Atual ---------- */
