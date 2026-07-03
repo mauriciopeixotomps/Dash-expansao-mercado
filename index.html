@@ -298,7 +298,7 @@ function renderGeral(){
   new Chart(document.getElementById('chart-status-donut'), {
     type:'doughnut',
     data:{labels:['Ativo','Inativo'], datasets:[{data:[ativo['Qtd. Unidades'], inativo['Qtd. Unidades']], backgroundColor:['#927245','#828384'], borderWidth:0}]},
-    options:{plugins:{legend:{position:'bottom'}}, cutout:'65%'}
+    options:{plugins:{legend:{position:'bottom'}, datalabels:{display:true, color:'#fff', font:{weight:'bold', size:14}, formatter:v=>FMT.int(v)}}, cutout:'65%'}
   });
 
   const topUF = DATA.panorama_uf.slice().sort((a,b)=>b['Unid. Total']-a['Unid. Total']).slice(0,8);
@@ -438,7 +438,7 @@ function renderPanorama(){
       {label:'Ativos', data:rows.map(r=>r.Ativos), backgroundColor:'#927245'},
       {label:'Inativos', data:rows.map(r=>r.Inativos), backgroundColor:'#828384'},
     ]},
-    options:{responsive:true, maintainAspectRatio:false, scales:{x:{stacked:true}, y:{stacked:true, beginAtZero:true}}, plugins:{legend:{position:'bottom'}}}
+    options:{responsive:true, maintainAspectRatio:false, scales:{x:{stacked:true}, y:{stacked:true, beginAtZero:true}}, plugins:{legend:{position:'bottom'}, datalabels:{display:ctx=>ctx.dataset.data[ctx.dataIndex]>0, color:'#fff', font:{weight:'bold', size:9}, formatter:v=>FMT.int(v)}}}
   });
   buildTable({
     container: sec.querySelectorAll('.card')[1],
@@ -561,10 +561,10 @@ function renderAproveitamento(){
   new Chart(document.getElementById('chart-aproveitamento'), {
     type:'bar',
     data:{labels:rows.map(r=>r.UF), datasets:[
-      {label:'PIB Coberto (bi)', data:rows.map(r=>r['PIB Coberto (bi)']), backgroundColor:'#927245'},
-      {label:'PIB em Aberto (bi)', data:rows.map(r=>r['PIB em Aberto (bi)']), backgroundColor:'#CDCDCD'},
+      {label:'PIB Coberto (bi)', data:rows.map(r=>r['PIB Coberto (bi)']), backgroundColor:'#927245', datalabels:{color:'#fff'}},
+      {label:'PIB em Aberto (bi)', data:rows.map(r=>r['PIB em Aberto (bi)']), backgroundColor:'#CDCDCD', datalabels:{color:'#54514D'}},
     ]},
-    options:{responsive:true, maintainAspectRatio:false, scales:{x:{stacked:true}, y:{stacked:true}}, plugins:{legend:{position:'bottom'}}}
+    options:{responsive:true, maintainAspectRatio:false, scales:{x:{stacked:true}, y:{stacked:true}}, plugins:{legend:{position:'bottom'}, datalabels:{display:ctx=>ctx.dataset.data[ctx.dataIndex]>0.05, font:{weight:'bold', size:9}, formatter:v=>FMT.num2(v)}}}
   });
   buildTable({
     container: sec.querySelectorAll('.card')[1],
