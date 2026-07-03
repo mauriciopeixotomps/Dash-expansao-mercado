@@ -151,6 +151,12 @@ function init(){
     document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('active', b===btn));
     document.querySelectorAll('main section').forEach(s=>s.classList.toggle('active', s.id===btn.dataset.tab));
     if(btn.dataset.tab === 'mapa') setTimeout(()=>{ if(window._mapaRede) window._mapaRede.invalidateSize(); }, 50);
+    setTimeout(()=>{
+      document.querySelectorAll(`#${btn.dataset.tab} canvas`).forEach(cv=>{
+        const ch = Chart.getChart(cv);
+        if(ch) ch.resize();
+      });
+    }, 50);
   });
 
   const main = document.getElementById('main');
@@ -313,8 +319,8 @@ function renderMapa(){
     <div class="card">
       <div id="map-rede"></div>
       <div class="map-legend">
-        <span><span class="dot" style="background:#927245"></span>Maioria ativa</span>
-        <span><span class="dot" style="background:#828384"></span>Maioria inativa</span>
+        <label style="cursor:pointer"><input type="checkbox" id="filtro-ativa" checked><span class="dot" style="background:#927245"></span>Maioria ativa</label>
+        <label style="cursor:pointer"><input type="checkbox" id="filtro-inativa" checked><span class="dot" style="background:#828384"></span>Maioria inativa</label>
         <span>Tamanho do ponto = total de unidades no município</span>
       </div>
     </div>
@@ -327,6 +333,9 @@ function renderMapa(){
     subdomains: 'abcd', maxZoom: 19,
   }).addTo(map);
 
+  const grupoAtivo = L.layerGroup().addTo(map);
+  const grupoInativo = L.layerGroup().addTo(map);
+
   pts.forEach(p=>{
     const total = p['Total Unid.'] || 0;
     const ativos = p['Ativos'] || 0;
@@ -335,12 +344,20 @@ function renderMapa(){
     const marker = L.circleMarker([p.lat, p.lon], {
       radius, weight:1, color:'#322E2B', fillColor: majorityAtivo ? '#927245' : '#828384',
       fillOpacity:.82,
-    }).addTo(map);
+    });
     marker.bindPopup(`
       <div class="popup-title">${p['Município']} — ${p.UF}</div>
       <div class="popup-row">Ativos: <b>${FMT.int(ativos)}</b> · Inativos: <b>${FMT.int(p['Inativos'])}</b> · Total: <b>${FMT.int(total)}</b></div>
       <div class="popup-row">% da rede: ${FMT.pct(p['% do Total Rede'])} · PIB 2025: ${FMT.bi(p['PIB 2025'])}</div>
     `);
+    marker.addTo(majorityAtivo ? grupoAtivo : grupoInativo);
+  });
+
+  sec.querySelector('#filtro-ativa').addEventListener('change', e=>{
+    if(e.target.checked) map.addLayer(grupoAtivo); else map.removeLayer(grupoAtivo);
+  });
+  sec.querySelector('#filtro-inativa').addEventListener('change', e=>{
+    if(e.target.checked) map.addLayer(grupoInativo); else map.removeLayer(grupoInativo);
   });
 }
 
