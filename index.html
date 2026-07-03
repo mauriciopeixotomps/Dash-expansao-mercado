@@ -5,19 +5,32 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Expansão de Mercado — Painel da Rede</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <style>
   :root{
-    --bg:#0f172a; --panel:#ffffff; --panel-alt:#f8fafc; --border:#e2e8f0;
-    --text:#1e293b; --text-mut:#64748b; --primary:#2563eb; --primary-dark:#1d4ed8;
-    --ativo:#16a34a; --inativo:#dc2626; --accent:#7c3aed; --warn:#d97706;
+    /* Paleta Studio Fiscal */
+    --bronze:#927245;      /* Bronze Nobre */
+    --duna:#D5AE77;        /* Duna */
+    --cinza-neutro:#CDCDCD;
+    --cinza-claro:#EBEBEB;
+    --taupe:#322E2B;       /* Taupe Escuro */
+    --branco-neve:#FDFDFD;
+    --grafite:#1F1F1F;     /* Cinza Grafite */
+    --cinza-escuro:#828384;
+
+    --panel:var(--branco-neve); --panel-alt:var(--cinza-claro); --border:var(--cinza-neutro);
+    --text:var(--grafite); --text-mut:var(--cinza-escuro);
+    --primary:var(--bronze); --primary-dark:var(--taupe);
+    --ativo:var(--bronze); --inativo:var(--cinza-escuro);
     --radius:12px;
   }
   *{box-sizing:border-box;}
   body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;background:var(--panel-alt);color:var(--text);}
-  header{background:linear-gradient(135deg,var(--bg),#1e3a5f);color:#fff;padding:28px 32px;}
+  header{background:linear-gradient(135deg,var(--taupe),var(--grafite));color:var(--branco-neve);padding:28px 32px;}
   header h1{margin:0 0 4px;font-size:24px;font-weight:700;}
-  header p{margin:0;color:#cbd5e1;font-size:14px;}
-  nav{position:sticky;top:0;z-index:50;background:#fff;border-bottom:1px solid var(--border);display:flex;gap:2px;overflow-x:auto;padding:0 16px;box-shadow:0 1px 3px rgba(0,0,0,.05);}
+  header p{margin:0;color:var(--cinza-neutro);font-size:14px;}
+  nav{position:sticky;top:0;z-index:50;background:var(--panel);border-bottom:1px solid var(--border);display:flex;gap:2px;overflow-x:auto;padding:0 16px;box-shadow:0 1px 3px rgba(0,0,0,.05);}
   nav button{border:none;background:transparent;padding:14px 16px;font-size:13.5px;font-weight:600;color:var(--text-mut);cursor:pointer;white-space:nowrap;border-bottom:3px solid transparent;transition:.15s;}
   nav button:hover{color:var(--primary);}
   nav button.active{color:var(--primary);border-bottom-color:var(--primary);}
@@ -37,7 +50,7 @@
   @media(max-width:900px){.grid-2{grid-template-columns:1fr;}}
   .controls{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:14px;align-items:center;}
   .controls input[type=text], .controls select{
-    padding:9px 12px;border:1px solid var(--border);border-radius:8px;font-size:13.5px;background:#fff;color:var(--text);
+    padding:9px 12px;border:1px solid var(--border);border-radius:8px;font-size:13.5px;background:var(--branco-neve);color:var(--text);
   }
   .controls input[type=text]{flex:1;min-width:200px;}
   .controls .count{font-size:12.5px;color:var(--text-mut);margin-left:auto;}
@@ -47,29 +60,35 @@
   thead th.sorted-asc::after{content:" ▲";font-size:9px;}
   thead th.sorted-desc::after{content:" ▼";font-size:9px;}
   tbody td{padding:9px 12px;border-bottom:1px solid var(--border);}
-  tbody tr:hover{background:#f1f5f9;}
+  tbody tr:hover{background:rgba(146,114,69,.06);}
   .table-wrap{overflow-x:auto;max-height:560px;overflow-y:auto;border:1px solid var(--border);border-radius:8px;}
   .badge{display:inline-block;padding:2px 9px;border-radius:99px;font-size:11.5px;font-weight:700;}
-  .badge-ativo{background:#dcfce7;color:var(--ativo);}
-  .badge-inativo{background:#fee2e2;color:var(--inativo);}
-  .badge-nao{background:#fee2e2;color:var(--inativo);}
-  .badge-sim{background:#dcfce7;color:var(--ativo);}
+  .badge-ativo{background:rgba(146,114,69,.15);color:var(--ativo);}
+  .badge-inativo{background:rgba(130,131,132,.18);color:var(--inativo);}
+  .badge-nao{background:rgba(130,131,132,.18);color:var(--inativo);}
+  .badge-sim{background:rgba(146,114,69,.15);color:var(--ativo);}
   .bar-cell{display:flex;align-items:center;gap:8px;}
-  .bar-track{flex:1;height:6px;background:#e2e8f0;border-radius:99px;overflow:hidden;min-width:50px;}
+  .bar-track{flex:1;height:6px;background:var(--cinza-claro);border-radius:99px;overflow:hidden;min-width:50px;}
   .bar-fill{height:100%;background:var(--primary);border-radius:99px;}
   .pager{display:flex;gap:8px;align-items:center;justify-content:flex-end;margin-top:10px;font-size:13px;}
-  .pager button{border:1px solid var(--border);background:#fff;border-radius:6px;padding:6px 12px;cursor:pointer;font-size:13px;}
+  .pager button{border:1px solid var(--border);background:var(--branco-neve);border-radius:6px;padding:6px 12px;cursor:pointer;font-size:13px;}
   .pager button:disabled{opacity:.4;cursor:not-allowed;}
   .pager span{color:var(--text-mut);}
   .chart-box{position:relative;height:320px;}
   .chart-box.tall{height:420px;}
-  .note-box{background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:14px 16px;font-size:13.5px;color:#1e3a5f;margin-bottom:16px;}
+  .note-box{background:rgba(213,174,119,.18);border:1px solid var(--duna);border-radius:8px;padding:14px 16px;font-size:13.5px;color:var(--taupe);margin-bottom:16px;}
   .method-block{margin-bottom:18px;}
   .method-block h3{font-size:14px;margin:0 0 8px;color:var(--primary-dark);}
   .method-block table{font-size:13px;}
   .method-block td{padding:6px 10px;border-bottom:1px solid var(--border);vertical-align:top;}
   .method-block td:first-child{font-weight:700;color:var(--text-mut);width:220px;}
   footer{text-align:center;color:var(--text-mut);font-size:12px;padding:20px;}
+  #map-rede{height:560px;border-radius:8px;overflow:hidden;border:1px solid var(--border);}
+  .map-legend{display:flex;flex-wrap:wrap;gap:18px;margin-top:14px;font-size:13px;color:var(--text-mut);align-items:center;}
+  .map-legend .dot{display:inline-block;width:12px;height:12px;border-radius:50%;margin-right:6px;vertical-align:middle;}
+  .leaflet-popup-content-wrapper{border-radius:8px;}
+  .popup-title{font-weight:700;margin-bottom:4px;color:var(--taupe);}
+  .popup-row{font-size:12.5px;color:var(--text-mut);}
 </style>
 </head>
 <body>
@@ -107,6 +126,7 @@ fetch('data.json').then(r=>r.json()).then(d=>{
 
 const TABS = [
   {id:'geral', label:'Visão Geral'},
+  {id:'mapa', label:'Mapa da Rede'},
   {id:'cobertura', label:'Cobertura Atual'},
   {id:'panorama', label:'Panorama por UF'},
   {id:'oportunidades', label:'Oportunidades'},
@@ -125,12 +145,14 @@ function init(){
     if(!btn) return;
     document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('active', b===btn));
     document.querySelectorAll('main section').forEach(s=>s.classList.toggle('active', s.id===btn.dataset.tab));
+    if(btn.dataset.tab === 'mapa') setTimeout(()=>{ if(window._mapaRede) window._mapaRede.invalidateSize(); }, 50);
   });
 
   const main = document.getElementById('main');
   main.innerHTML = TABS.map(t=>`<section id="${t.id}" class="${t.id==='geral'?'active':''}"></section>`).join('');
 
   renderGeral();
+  renderMapa();
   renderCobertura();
   renderPanorama();
   renderOportunidades();
@@ -260,7 +282,7 @@ function renderGeral(){
 
   new Chart(document.getElementById('chart-status-donut'), {
     type:'doughnut',
-    data:{labels:['Ativo','Inativo'], datasets:[{data:[ativo['Qtd. Unidades'], inativo['Qtd. Unidades']], backgroundColor:['#16a34a','#dc2626'], borderWidth:0}]},
+    data:{labels:['Ativo','Inativo'], datasets:[{data:[ativo['Qtd. Unidades'], inativo['Qtd. Unidades']], backgroundColor:['#927245','#828384'], borderWidth:0}]},
     options:{plugins:{legend:{position:'bottom'}}, cutout:'65%'}
   });
 
@@ -268,10 +290,52 @@ function renderGeral(){
   new Chart(document.getElementById('chart-top-uf'), {
     type:'bar',
     data:{labels:topUF.map(u=>u.UF), datasets:[
-      {label:'Ativos', data:topUF.map(u=>u.Ativos), backgroundColor:'#16a34a'},
-      {label:'Inativos', data:topUF.map(u=>u.Inativos), backgroundColor:'#dc2626'},
+      {label:'Ativos', data:topUF.map(u=>u.Ativos), backgroundColor:'#927245'},
+      {label:'Inativos', data:topUF.map(u=>u.Inativos), backgroundColor:'#828384'},
     ]},
     options:{responsive:true, maintainAspectRatio:false, scales:{x:{stacked:true}, y:{stacked:true}}, plugins:{legend:{position:'bottom'}}}
+  });
+}
+
+/* ---------- Mapa da Rede ---------- */
+function renderMapa(){
+  const sec = document.getElementById('mapa');
+  const pts = DATA.mapa_unidades || [];
+  const skippedCount = DATA.cobertura.length - pts.length;
+  sec.innerHTML = `
+    <h2>Mapa da Rede</h2>
+    <p class="subtitle">${pts.length} de ${DATA.cobertura.length} municípios com franqueado geocodificados${skippedCount>0?` — ${skippedCount} registro(s) com nome de município inválido na base não foram plotados`:''}.</p>
+    <div class="card">
+      <div id="map-rede"></div>
+      <div class="map-legend">
+        <span><span class="dot" style="background:#927245"></span>Maioria ativa</span>
+        <span><span class="dot" style="background:#828384"></span>Maioria inativa</span>
+        <span>Tamanho do ponto = total de unidades no município</span>
+      </div>
+    </div>
+  `;
+
+  const map = L.map('map-rede', {scrollWheelZoom:false}).setView([-14.2, -51.9], 4);
+  window._mapaRede = map;
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+    attribution: '&copy; OpenStreetMap &copy; CARTO',
+    subdomains: 'abcd', maxZoom: 19,
+  }).addTo(map);
+
+  pts.forEach(p=>{
+    const total = p['Total Unid.'] || 0;
+    const ativos = p['Ativos'] || 0;
+    const majorityAtivo = ativos >= (p['Inativos']||0);
+    const radius = 4 + Math.sqrt(total) * 3.2;
+    const marker = L.circleMarker([p.lat, p.lon], {
+      radius, weight:1, color:'#322E2B', fillColor: majorityAtivo ? '#927245' : '#828384',
+      fillOpacity:.82,
+    }).addTo(map);
+    marker.bindPopup(`
+      <div class="popup-title">${p['Município']} — ${p.UF}</div>
+      <div class="popup-row">Ativos: <b>${FMT.int(ativos)}</b> · Inativos: <b>${FMT.int(p['Inativos'])}</b> · Total: <b>${FMT.int(total)}</b></div>
+      <div class="popup-row">% da rede: ${FMT.pct(p['% do Total Rede'])} · PIB 2025: ${FMT.bi(p['PIB 2025'])}</div>
+    `);
   });
 }
 
@@ -292,7 +356,7 @@ function renderCobertura(){
       {key:'Inativos', label:'Inativos', render:r=>`<span class="badge badge-inativo">${FMT.int(r.Inativos)}</span>`},
       {key:'Total Unid.', label:'Total'},
       {key:'% do Total Rede', label:'% da Rede', render:r=>barCell(r['% do Total Rede'])},
-      {key:'% Ativos (local)', label:'% Ativos (local)', render:r=>barCell(r['% Ativos (local)'],'#16a34a')},
+      {key:'% Ativos (local)', label:'% Ativos (local)', render:r=>barCell(r['% Ativos (local)'])},
       {key:'PIB 2025', label:'PIB 2025', render:r=>FMT.bi(r['PIB 2025'])},
     ]
   });
@@ -311,8 +375,8 @@ function renderPanorama(){
   new Chart(document.getElementById('chart-panorama'), {
     type:'bar',
     data:{labels:rows.map(r=>r.UF), datasets:[
-      {label:'Ativos', data:rows.map(r=>r.Ativos), backgroundColor:'#16a34a'},
-      {label:'Inativos', data:rows.map(r=>r.Inativos), backgroundColor:'#dc2626'},
+      {label:'Ativos', data:rows.map(r=>r.Ativos), backgroundColor:'#927245'},
+      {label:'Inativos', data:rows.map(r=>r.Inativos), backgroundColor:'#828384'},
     ]},
     options:{responsive:true, maintainAspectRatio:false, scales:{x:{stacked:true}, y:{stacked:true, beginAtZero:true}}, plugins:{legend:{position:'bottom'}}}
   });
@@ -328,7 +392,7 @@ function renderPanorama(){
       {key:'Ativos', label:'Ativos', render:r=>`<span class="badge badge-ativo">${FMT.int(r.Ativos)}</span>`},
       {key:'Inativos', label:'Inativos', render:r=>`<span class="badge badge-inativo">${FMT.int(r.Inativos)}</span>`},
       {key:'% do Total Rede', label:'% da Rede', render:r=>barCell(r['% do Total Rede'])},
-      {key:'% Ativos (UF)', label:'% Ativos (UF)', render:r=>barCell(r['% Ativos (UF)'],'#16a34a')},
+      {key:'% Ativos (UF)', label:'% Ativos (UF)', render:r=>barCell(r['% Ativos (UF)'])},
     ]
   });
 }
@@ -347,7 +411,7 @@ function renderOportunidades(){
       {key:'Município', label:'Município'},
       {key:'UF', label:'UF'},
       {key:'PIB 2025', label:'PIB 2025', render:r=>FMT.bi(r['PIB 2025'])},
-      {key:'Cresc. 23→25', label:'Cresc. 23→25', render:r=>barCell(r['Cresc. 23→25'], r['Cresc. 23→25']>=0?'#16a34a':'#dc2626')},
+      {key:'Cresc. 23→25', label:'Cresc. 23→25', render:r=>barCell(r['Cresc. 23→25'], r['Cresc. 23→25']>=0?'#927245':'#828384')},
     ]
   });
 }
@@ -374,7 +438,7 @@ function renderCrescimentoUF(){
     const uf = sel.value;
     const rows = DATA.top10_crescimento_pib_uf.filter(r=>r.UF===uf);
     document.getElementById('tbody-cresc-uf').innerHTML = rows.map(r=>`
-      <tr><td>${FMT.int(r['#'])}</td><td>${r['Município']}</td><td>${FMT.num2(r['PIB 2023 (bi)'])}</td><td>${FMT.num2(r['PIB 2025 (bi)'])}</td><td>${barCell(r['Crescimento'],'#16a34a')}</td></tr>
+      <tr><td>${FMT.int(r['#'])}</td><td>${r['Município']}</td><td>${FMT.num2(r['PIB 2023 (bi)'])}</td><td>${FMT.num2(r['PIB 2025 (bi)'])}</td><td>${barCell(r['Crescimento'])}</td></tr>
     `).join('');
   }
   sel.addEventListener('change', render);
@@ -397,7 +461,7 @@ function renderCrescimentoGeral(){
       {key:'UF', label:'UF'},
       {key:'PIB 2023 (bi)', label:'PIB 2023', render:r=>FMT.num2(r['PIB 2023 (bi)'])},
       {key:'PIB 2025 (bi)', label:'PIB 2025', render:r=>FMT.num2(r['PIB 2025 (bi)'])},
-      {key:'Crescimento', label:'Crescimento', render:r=>barCell(r['Crescimento'],'#16a34a')},
+      {key:'Crescimento', label:'Crescimento', render:r=>barCell(r['Crescimento'])},
       {key:'Franqueado?', label:'Franqueado?', render:r=>`<span class="badge ${r['Franqueado?']==='Sim'?'badge-sim':'badge-nao'}">${r['Franqueado?']}</span>`},
     ]
   });
@@ -419,7 +483,7 @@ function renderPibAberto(){
       {key:'UF', label:'UF'},
       {key:'PIB 2025 (bi)', label:'PIB 2025', render:r=>FMT.num2(r['PIB 2025 (bi)'])},
       {key:'PIB 2023 (bi)', label:'PIB 2023', render:r=>FMT.num2(r['PIB 2023 (bi)'])},
-      {key:'Cresc. 23→25', label:'Cresc. 23→25', render:r=>barCell(r['Cresc. 23→25'],'#16a34a')},
+      {key:'Cresc. 23→25', label:'Cresc. 23→25', render:r=>barCell(r['Cresc. 23→25'])},
     ]
   });
 }
@@ -437,8 +501,8 @@ function renderAproveitamento(){
   new Chart(document.getElementById('chart-aproveitamento'), {
     type:'bar',
     data:{labels:rows.map(r=>r.UF), datasets:[
-      {label:'PIB Coberto (bi)', data:rows.map(r=>r['PIB Coberto (bi)']), backgroundColor:'#2563eb'},
-      {label:'PIB em Aberto (bi)', data:rows.map(r=>r['PIB em Aberto (bi)']), backgroundColor:'#e2e8f0'},
+      {label:'PIB Coberto (bi)', data:rows.map(r=>r['PIB Coberto (bi)']), backgroundColor:'#927245'},
+      {label:'PIB em Aberto (bi)', data:rows.map(r=>r['PIB em Aberto (bi)']), backgroundColor:'#CDCDCD'},
     ]},
     options:{responsive:true, maintainAspectRatio:false, scales:{x:{stacked:true}, y:{stacked:true}}, plugins:{legend:{position:'bottom'}}}
   });
