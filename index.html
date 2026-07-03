@@ -1,0 +1,488 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Expansão de Mercado — Painel da Rede</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+<style>
+  :root{
+    --bg:#0f172a; --panel:#ffffff; --panel-alt:#f8fafc; --border:#e2e8f0;
+    --text:#1e293b; --text-mut:#64748b; --primary:#2563eb; --primary-dark:#1d4ed8;
+    --ativo:#16a34a; --inativo:#dc2626; --accent:#7c3aed; --warn:#d97706;
+    --radius:12px;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;background:var(--panel-alt);color:var(--text);}
+  header{background:linear-gradient(135deg,var(--bg),#1e3a5f);color:#fff;padding:28px 32px;}
+  header h1{margin:0 0 4px;font-size:24px;font-weight:700;}
+  header p{margin:0;color:#cbd5e1;font-size:14px;}
+  nav{position:sticky;top:0;z-index:50;background:#fff;border-bottom:1px solid var(--border);display:flex;gap:2px;overflow-x:auto;padding:0 16px;box-shadow:0 1px 3px rgba(0,0,0,.05);}
+  nav button{border:none;background:transparent;padding:14px 16px;font-size:13.5px;font-weight:600;color:var(--text-mut);cursor:pointer;white-space:nowrap;border-bottom:3px solid transparent;transition:.15s;}
+  nav button:hover{color:var(--primary);}
+  nav button.active{color:var(--primary);border-bottom-color:var(--primary);}
+  main{max-width:1280px;margin:0 auto;padding:24px 20px 60px;}
+  section{display:none;animation:fade .25s ease;}
+  section.active{display:block;}
+  @keyframes fade{from{opacity:0;transform:translateY(4px);}to{opacity:1;transform:none;}}
+  h2{font-size:19px;margin:0 0 4px;}
+  .subtitle{color:var(--text-mut);font-size:13px;margin:0 0 18px;}
+  .card{background:var(--panel);border:1px solid var(--border);border-radius:var(--radius);padding:20px;margin-bottom:20px;box-shadow:0 1px 2px rgba(0,0,0,.03);}
+  .kpi-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px;margin-bottom:20px;}
+  .kpi{background:var(--panel);border:1px solid var(--border);border-radius:var(--radius);padding:18px 20px;}
+  .kpi .label{font-size:12px;color:var(--text-mut);text-transform:uppercase;letter-spacing:.04em;font-weight:600;}
+  .kpi .value{font-size:28px;font-weight:800;margin-top:4px;}
+  .kpi .sub{font-size:12px;color:var(--text-mut);margin-top:2px;}
+  .grid-2{display:grid;grid-template-columns:1.1fr 1fr;gap:20px;}
+  @media(max-width:900px){.grid-2{grid-template-columns:1fr;}}
+  .controls{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:14px;align-items:center;}
+  .controls input[type=text], .controls select{
+    padding:9px 12px;border:1px solid var(--border);border-radius:8px;font-size:13.5px;background:#fff;color:var(--text);
+  }
+  .controls input[type=text]{flex:1;min-width:200px;}
+  .controls .count{font-size:12.5px;color:var(--text-mut);margin-left:auto;}
+  table{width:100%;border-collapse:collapse;font-size:13.5px;}
+  thead th{position:sticky;top:0;background:var(--panel-alt);text-align:left;padding:10px 12px;font-weight:700;color:var(--text-mut);font-size:11.5px;text-transform:uppercase;letter-spacing:.03em;border-bottom:2px solid var(--border);cursor:pointer;user-select:none;white-space:nowrap;}
+  thead th:hover{color:var(--primary);}
+  thead th.sorted-asc::after{content:" ▲";font-size:9px;}
+  thead th.sorted-desc::after{content:" ▼";font-size:9px;}
+  tbody td{padding:9px 12px;border-bottom:1px solid var(--border);}
+  tbody tr:hover{background:#f1f5f9;}
+  .table-wrap{overflow-x:auto;max-height:560px;overflow-y:auto;border:1px solid var(--border);border-radius:8px;}
+  .badge{display:inline-block;padding:2px 9px;border-radius:99px;font-size:11.5px;font-weight:700;}
+  .badge-ativo{background:#dcfce7;color:var(--ativo);}
+  .badge-inativo{background:#fee2e2;color:var(--inativo);}
+  .badge-nao{background:#fee2e2;color:var(--inativo);}
+  .badge-sim{background:#dcfce7;color:var(--ativo);}
+  .bar-cell{display:flex;align-items:center;gap:8px;}
+  .bar-track{flex:1;height:6px;background:#e2e8f0;border-radius:99px;overflow:hidden;min-width:50px;}
+  .bar-fill{height:100%;background:var(--primary);border-radius:99px;}
+  .pager{display:flex;gap:8px;align-items:center;justify-content:flex-end;margin-top:10px;font-size:13px;}
+  .pager button{border:1px solid var(--border);background:#fff;border-radius:6px;padding:6px 12px;cursor:pointer;font-size:13px;}
+  .pager button:disabled{opacity:.4;cursor:not-allowed;}
+  .pager span{color:var(--text-mut);}
+  .chart-box{position:relative;height:320px;}
+  .chart-box.tall{height:420px;}
+  .note-box{background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:14px 16px;font-size:13.5px;color:#1e3a5f;margin-bottom:16px;}
+  .method-block{margin-bottom:18px;}
+  .method-block h3{font-size:14px;margin:0 0 8px;color:var(--primary-dark);}
+  .method-block table{font-size:13px;}
+  .method-block td{padding:6px 10px;border-bottom:1px solid var(--border);vertical-align:top;}
+  .method-block td:first-child{font-weight:700;color:var(--text-mut);width:220px;}
+  footer{text-align:center;color:var(--text-mut);font-size:12px;padding:20px;}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>📍 Expansão de Mercado — Painel da Rede</h1>
+  <p>Estudo de região e tamanho de rede · dados consolidados de franqueados e PIB municipal 2023–2025</p>
+</header>
+
+<nav id="tabs"></nav>
+
+<main id="main"></main>
+
+<footer>Painel gerado a partir da planilha "Expansão de mercado" · uso interno do time comercial</footer>
+
+<script>
+const FMT = {
+  int: n => (n==null?'-':Math.round(n).toLocaleString('pt-BR')),
+  pct: n => (n==null?'-':(n*100).toLocaleString('pt-BR',{minimumFractionDigits:1,maximumFractionDigits:1})+'%'),
+  bi: n => (n==null?'-':'R$ '+Number(n).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})+' bi'),
+  num2: n => (n==null?'-':Number(n).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})),
+};
+
+let DATA = null;
+const UFS = new Set();
+
+fetch('data.json').then(r=>r.json()).then(d=>{
+  DATA = d;
+  d.cobertura.forEach(r=>UFS.add(r.UF));
+  d.panorama_uf.forEach(r=>UFS.add(r.UF));
+  init();
+}).catch(err=>{
+  document.getElementById('main').innerHTML = '<div class="card">Erro ao carregar dados: '+err+'</div>';
+});
+
+const TABS = [
+  {id:'geral', label:'Visão Geral'},
+  {id:'cobertura', label:'Cobertura Atual'},
+  {id:'panorama', label:'Panorama por UF'},
+  {id:'oportunidades', label:'Oportunidades'},
+  {id:'crescimento_uf', label:'Crescimento PIB por UF'},
+  {id:'crescimento_geral', label:'Top 50 Crescimento'},
+  {id:'pib_aberto', label:'Top 50 PIB em Aberto'},
+  {id:'aproveitamento', label:'Aproveitamento por Estado'},
+  {id:'metodologia', label:'Metodologia'},
+];
+
+function init(){
+  const nav = document.getElementById('tabs');
+  nav.innerHTML = TABS.map((t,i)=>`<button data-tab="${t.id}" class="${i===0?'active':''}">${t.label}</button>`).join('');
+  nav.addEventListener('click', e=>{
+    const btn = e.target.closest('button[data-tab]');
+    if(!btn) return;
+    document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('active', b===btn));
+    document.querySelectorAll('main section').forEach(s=>s.classList.toggle('active', s.id===btn.dataset.tab));
+  });
+
+  const main = document.getElementById('main');
+  main.innerHTML = TABS.map(t=>`<section id="${t.id}" class="${t.id==='geral'?'active':''}"></section>`).join('');
+
+  renderGeral();
+  renderCobertura();
+  renderPanorama();
+  renderOportunidades();
+  renderCrescimentoUF();
+  renderCrescimentoGeral();
+  renderPibAberto();
+  renderAproveitamento();
+  renderMetodologia();
+}
+
+/* ---------- Generic sortable/searchable table ---------- */
+function buildTable({container, columns, rows, pageSize=50, searchable=true, ufFilter=false, defaultSort=null}){
+  container.innerHTML = `
+    <div class="controls">
+      ${searchable?'<input type="text" placeholder="Buscar..." class="search-input">':''}
+      ${ufFilter?'<select class="uf-select"><option value="">Todas as UFs</option>'+[...UFS].sort().map(u=>`<option value="${u}">${u}</option>`).join('')+'</select>':''}
+      <span class="count"></span>
+    </div>
+    <div class="table-wrap"><table><thead><tr>${columns.map(c=>`<th data-key="${c.key}">${c.label}</th>`).join('')}</tr></thead><tbody></tbody></table></div>
+    <div class="pager"><button class="prev">‹ Anterior</button><span class="page-info"></span><button class="next">Próxima ›</button></div>
+  `;
+  let sortKey = defaultSort ? defaultSort.key : null;
+  let sortDir = defaultSort ? defaultSort.dir : 1;
+  let filtered = rows.slice();
+  let page = 0;
+
+  const searchInput = container.querySelector('.search-input');
+  const ufSelect = container.querySelector('.uf-select');
+  const tbody = container.querySelector('tbody');
+  const countEl = container.querySelector('.count');
+  const pageInfo = container.querySelector('.page-info');
+  const prevBtn = container.querySelector('.prev');
+  const nextBtn = container.querySelector('.next');
+
+  function applyFilters(){
+    const q = searchInput ? searchInput.value.trim().toLowerCase() : '';
+    const uf = ufSelect ? ufSelect.value : '';
+    filtered = rows.filter(r=>{
+      if(uf && r.UF !== uf) return false;
+      if(!q) return true;
+      return columns.some(c=> String(r[c.key] ?? '').toLowerCase().includes(q));
+    });
+    if(sortKey) sortRows();
+    page = 0;
+    renderPage();
+  }
+
+  function sortRows(){
+    filtered.sort((a,b)=>{
+      let av = a[sortKey], bv = b[sortKey];
+      if(typeof av === 'string') av = av.toLowerCase();
+      if(typeof bv === 'string') bv = bv.toLowerCase();
+      if(av==null) av = -Infinity;
+      if(bv==null) bv = -Infinity;
+      if(av<bv) return -1*sortDir;
+      if(av>bv) return 1*sortDir;
+      return 0;
+    });
+  }
+
+  function renderPage(){
+    const start = page*pageSize;
+    const pageRows = filtered.slice(start, start+pageSize);
+    tbody.innerHTML = pageRows.map(r=>'<tr>'+columns.map(c=>`<td>${c.render ? c.render(r) : (r[c.key] ?? '-')}</td>`).join('')+'</tr>').join('') || '<tr><td colspan="'+columns.length+'" style="text-align:center;color:var(--text-mut);padding:24px;">Nenhum resultado</td></tr>';
+    countEl.textContent = filtered.length.toLocaleString('pt-BR')+' registros';
+    const totalPages = Math.max(1, Math.ceil(filtered.length/pageSize));
+    pageInfo.textContent = `Página ${page+1} de ${totalPages}`;
+    prevBtn.disabled = page===0;
+    nextBtn.disabled = page>=totalPages-1;
+    container.querySelectorAll('thead th').forEach(th=>{
+      th.classList.remove('sorted-asc','sorted-desc');
+      if(th.dataset.key===sortKey) th.classList.add(sortDir===1?'sorted-asc':'sorted-desc');
+    });
+  }
+
+  container.querySelectorAll('thead th').forEach(th=>{
+    th.addEventListener('click', ()=>{
+      const key = th.dataset.key;
+      if(sortKey===key) sortDir *= -1; else { sortKey = key; sortDir = 1; }
+      sortRows(); page=0; renderPage();
+    });
+  });
+  if(searchInput) searchInput.addEventListener('input', applyFilters);
+  if(ufSelect) ufSelect.addEventListener('change', applyFilters);
+  prevBtn.addEventListener('click', ()=>{ if(page>0){page--; renderPage();} });
+  nextBtn.addEventListener('click', ()=>{ const tp=Math.max(1,Math.ceil(filtered.length/pageSize)); if(page<tp-1){page++; renderPage();} });
+
+  applyFilters();
+}
+
+function barCell(pct, color){
+  const p = Math.max(0, Math.min(100, (pct||0)*100));
+  return `<div class="bar-cell"><div class="bar-track"><div class="bar-fill" style="width:${p}%;background:${color||'var(--primary)'}"></div></div><span>${FMT.pct(pct)}</span></div>`;
+}
+
+/* ---------- Visão Geral ---------- */
+function renderGeral(){
+  const sec = document.getElementById('geral');
+  const st = DATA.status;
+  const ativo = st.rows.find(r=>r.Status==='Ativo');
+  const inativo = st.rows.find(r=>r.Status==='Inativo');
+  const total = st.rows.find(r=>r.Status==='TOTAL');
+  const nMunUF = DATA.panorama_uf.length;
+
+  sec.innerHTML = `
+    <h2>Visão Geral da Rede</h2>
+    <p class="subtitle">${st.base_note}</p>
+    <div class="kpi-row">
+      <div class="kpi"><div class="label">Total de Unidades</div><div class="value">${FMT.int(total['Qtd. Unidades'])}</div><div class="sub">base da rede</div></div>
+      <div class="kpi"><div class="label">Ativas</div><div class="value" style="color:var(--ativo)">${FMT.int(ativo['Qtd. Unidades'])}</div><div class="sub">${FMT.pct(ativo['% do Total'])} do total</div></div>
+      <div class="kpi"><div class="label">Inativas</div><div class="value" style="color:var(--inativo)">${FMT.int(inativo['Qtd. Unidades'])}</div><div class="sub">${FMT.pct(inativo['% do Total'])} do total</div></div>
+      <div class="kpi"><div class="label">Estados com Presença</div><div class="value">${nMunUF}</div><div class="sub">UFs cobertas</div></div>
+    </div>
+    <div class="grid-2">
+      <div class="card">
+        <h2 style="font-size:15px">Ativo × Inativo</h2>
+        <div class="chart-box"><canvas id="chart-status-donut"></canvas></div>
+      </div>
+      <div class="card">
+        <h2 style="font-size:15px">Leitura</h2>
+        <div class="note-box">${st.leitura.map(l=>`<div style="margin-bottom:6px">${l}</div>`).join('')}</div>
+        <h2 style="font-size:15px;margin-top:18px">Top 8 UFs por unidades</h2>
+        <div class="chart-box"><canvas id="chart-top-uf"></canvas></div>
+      </div>
+    </div>
+  `;
+
+  new Chart(document.getElementById('chart-status-donut'), {
+    type:'doughnut',
+    data:{labels:['Ativo','Inativo'], datasets:[{data:[ativo['Qtd. Unidades'], inativo['Qtd. Unidades']], backgroundColor:['#16a34a','#dc2626'], borderWidth:0}]},
+    options:{plugins:{legend:{position:'bottom'}}, cutout:'65%'}
+  });
+
+  const topUF = DATA.panorama_uf.slice().sort((a,b)=>b['Unid. Total']-a['Unid. Total']).slice(0,8);
+  new Chart(document.getElementById('chart-top-uf'), {
+    type:'bar',
+    data:{labels:topUF.map(u=>u.UF), datasets:[
+      {label:'Ativos', data:topUF.map(u=>u.Ativos), backgroundColor:'#16a34a'},
+      {label:'Inativos', data:topUF.map(u=>u.Inativos), backgroundColor:'#dc2626'},
+    ]},
+    options:{responsive:true, maintainAspectRatio:false, scales:{x:{stacked:true}, y:{stacked:true}}, plugins:{legend:{position:'bottom'}}}
+  });
+}
+
+/* ---------- Cobertura Atual ---------- */
+function renderCobertura(){
+  const sec = document.getElementById('cobertura');
+  sec.innerHTML = `<h2>Municípios com Franqueado</h2><p class="subtitle">Ativo/Inativo e representatividade de cada município na rede (${DATA.cobertura.length} municípios com presença).</p><div class="card"></div>`;
+  buildTable({
+    container: sec.querySelector('.card'),
+    rows: DATA.cobertura,
+    searchable: true, ufFilter: true,
+    defaultSort: {key:'Total Unid.', dir:-1},
+    columns: [
+      {key:'Rank', label:'#', render:r=>FMT.int(r.Rank)},
+      {key:'Município', label:'Município'},
+      {key:'UF', label:'UF'},
+      {key:'Ativos', label:'Ativos', render:r=>`<span class="badge badge-ativo">${FMT.int(r.Ativos)}</span>`},
+      {key:'Inativos', label:'Inativos', render:r=>`<span class="badge badge-inativo">${FMT.int(r.Inativos)}</span>`},
+      {key:'Total Unid.', label:'Total'},
+      {key:'% do Total Rede', label:'% da Rede', render:r=>barCell(r['% do Total Rede'])},
+      {key:'% Ativos (local)', label:'% Ativos (local)', render:r=>barCell(r['% Ativos (local)'],'#16a34a')},
+      {key:'PIB 2025', label:'PIB 2025', render:r=>FMT.bi(r['PIB 2025'])},
+    ]
+  });
+}
+
+/* ---------- Panorama por UF ---------- */
+function renderPanorama(){
+  const sec = document.getElementById('panorama');
+  sec.innerHTML = `
+    <h2>Cobertura da Rede por Estado</h2>
+    <p class="subtitle">Distribuição de unidades, municípios e representatividade por UF.</p>
+    <div class="card"><div class="chart-box tall"><canvas id="chart-panorama"></canvas></div></div>
+    <div class="card"></div>
+  `;
+  const rows = DATA.panorama_uf.slice().sort((a,b)=>b['Unid. Total']-a['Unid. Total']);
+  new Chart(document.getElementById('chart-panorama'), {
+    type:'bar',
+    data:{labels:rows.map(r=>r.UF), datasets:[
+      {label:'Ativos', data:rows.map(r=>r.Ativos), backgroundColor:'#16a34a'},
+      {label:'Inativos', data:rows.map(r=>r.Inativos), backgroundColor:'#dc2626'},
+    ]},
+    options:{responsive:true, maintainAspectRatio:false, scales:{x:{stacked:true}, y:{stacked:true, beginAtZero:true}}, plugins:{legend:{position:'bottom'}}}
+  });
+  buildTable({
+    container: sec.querySelectorAll('.card')[1],
+    rows: DATA.panorama_uf,
+    searchable: true, ufFilter:false,
+    defaultSort: {key:'Unid. Total', dir:-1},
+    columns: [
+      {key:'UF', label:'UF'},
+      {key:'Municípios', label:'Municípios'},
+      {key:'Unid. Total', label:'Unid. Total'},
+      {key:'Ativos', label:'Ativos', render:r=>`<span class="badge badge-ativo">${FMT.int(r.Ativos)}</span>`},
+      {key:'Inativos', label:'Inativos', render:r=>`<span class="badge badge-inativo">${FMT.int(r.Inativos)}</span>`},
+      {key:'% do Total Rede', label:'% da Rede', render:r=>barCell(r['% do Total Rede'])},
+      {key:'% Ativos (UF)', label:'% Ativos (UF)', render:r=>barCell(r['% Ativos (UF)'],'#16a34a')},
+    ]
+  });
+}
+
+/* ---------- Oportunidades sem franqueado ---------- */
+function renderOportunidades(){
+  const sec = document.getElementById('oportunidades');
+  sec.innerHTML = `<h2>Municípios sem Franqueado</h2><p class="subtitle">Ranking por PIB 2025 — ${DATA.oportunidades.length.toLocaleString('pt-BR')} municípios sem presença da rede.</p><div class="card"></div>`;
+  buildTable({
+    container: sec.querySelector('.card'),
+    rows: DATA.oportunidades,
+    searchable: true, ufFilter: true,
+    defaultSort: {key:'PIB 2025', dir:-1},
+    columns: [
+      {key:'Rank', label:'#', render:r=>FMT.int(r.Rank)},
+      {key:'Município', label:'Município'},
+      {key:'UF', label:'UF'},
+      {key:'PIB 2025', label:'PIB 2025', render:r=>FMT.bi(r['PIB 2025'])},
+      {key:'Cresc. 23→25', label:'Cresc. 23→25', render:r=>barCell(r['Cresc. 23→25'], r['Cresc. 23→25']>=0?'#16a34a':'#dc2626')},
+    ]
+  });
+}
+
+/* ---------- Crescimento PIB por UF (top10) ---------- */
+function renderCrescimentoUF(){
+  const sec = document.getElementById('crescimento_uf');
+  const ufs = [...new Set(DATA.top10_crescimento_pib_uf.map(r=>r.UF))].sort();
+  sec.innerHTML = `
+    <h2>Top 10 Municípios que mais Cresceram em PIB (2023→2025)</h2>
+    <p class="subtitle">Por estado. Considerados municípios com PIB 2023 > 0.</p>
+    <div class="card">
+      <div class="controls">
+        <select id="uf-cresc-select">${ufs.map(u=>`<option value="${u}">${u}</option>`).join('')}</select>
+      </div>
+      <div class="table-wrap"><table>
+        <thead><tr><th>#</th><th>Município</th><th>PIB 2023 (bi)</th><th>PIB 2025 (bi)</th><th>Crescimento</th></tr></thead>
+        <tbody id="tbody-cresc-uf"></tbody>
+      </table></div>
+    </div>
+  `;
+  const sel = document.getElementById('uf-cresc-select');
+  function render(){
+    const uf = sel.value;
+    const rows = DATA.top10_crescimento_pib_uf.filter(r=>r.UF===uf);
+    document.getElementById('tbody-cresc-uf').innerHTML = rows.map(r=>`
+      <tr><td>${FMT.int(r['#'])}</td><td>${r['Município']}</td><td>${FMT.num2(r['PIB 2023 (bi)'])}</td><td>${FMT.num2(r['PIB 2025 (bi)'])}</td><td>${barCell(r['Crescimento'],'#16a34a')}</td></tr>
+    `).join('');
+  }
+  sel.addEventListener('change', render);
+  render();
+}
+
+/* ---------- Top 50 Crescimento Geral ---------- */
+function renderCrescimentoGeral(){
+  const sec = document.getElementById('crescimento_geral');
+  sec.innerHTML = `<h2>Top 50 Municípios do Brasil — Maior Crescimento de PIB (2023→2025)</h2><p class="subtitle">Ranking nacional, com indicação se a rede já está presente.</p><div class="card"></div>`;
+  buildTable({
+    container: sec.querySelector('.card'),
+    rows: DATA.top50_crescimento_geral,
+    searchable: true, ufFilter: true,
+    defaultSort: {key:'Rank', dir:1},
+    pageSize:50,
+    columns: [
+      {key:'Rank', label:'#'},
+      {key:'Município', label:'Município'},
+      {key:'UF', label:'UF'},
+      {key:'PIB 2023 (bi)', label:'PIB 2023', render:r=>FMT.num2(r['PIB 2023 (bi)'])},
+      {key:'PIB 2025 (bi)', label:'PIB 2025', render:r=>FMT.num2(r['PIB 2025 (bi)'])},
+      {key:'Crescimento', label:'Crescimento', render:r=>barCell(r['Crescimento'],'#16a34a')},
+      {key:'Franqueado?', label:'Franqueado?', render:r=>`<span class="badge ${r['Franqueado?']==='Sim'?'badge-sim':'badge-nao'}">${r['Franqueado?']}</span>`},
+    ]
+  });
+}
+
+/* ---------- Top 50 PIB Não Abordado ---------- */
+function renderPibAberto(){
+  const sec = document.getElementById('pib_aberto');
+  sec.innerHTML = `<h2>Top 50 Maiores PIBs sem Franqueado</h2><p class="subtitle">Municípios sem presença da rede, ordenados por potencial absoluto (PIB 2025).</p><div class="card"></div>`;
+  buildTable({
+    container: sec.querySelector('.card'),
+    rows: DATA.top50_pib_nao_abordado,
+    searchable: true, ufFilter: true,
+    defaultSort: {key:'Rank', dir:1},
+    pageSize:50,
+    columns: [
+      {key:'Rank', label:'#'},
+      {key:'Município', label:'Município'},
+      {key:'UF', label:'UF'},
+      {key:'PIB 2025 (bi)', label:'PIB 2025', render:r=>FMT.num2(r['PIB 2025 (bi)'])},
+      {key:'PIB 2023 (bi)', label:'PIB 2023', render:r=>FMT.num2(r['PIB 2023 (bi)'])},
+      {key:'Cresc. 23→25', label:'Cresc. 23→25', render:r=>barCell(r['Cresc. 23→25'],'#16a34a')},
+    ]
+  });
+}
+
+/* ---------- Aproveitamento por Estado ---------- */
+function renderAproveitamento(){
+  const sec = document.getElementById('aproveitamento');
+  sec.innerHTML = `
+    <h2>Aproveitamento de Mercado por Estado</h2>
+    <p class="subtitle">PIB coberto pela rede × PIB em aberto, por UF.</p>
+    <div class="card"><div class="chart-box tall"><canvas id="chart-aproveitamento"></canvas></div></div>
+    <div class="card"></div>
+  `;
+  const rows = DATA.aproveitamento_estado.slice().sort((a,b)=>b['% Aproveit. PIB']-a['% Aproveit. PIB']);
+  new Chart(document.getElementById('chart-aproveitamento'), {
+    type:'bar',
+    data:{labels:rows.map(r=>r.UF), datasets:[
+      {label:'PIB Coberto (bi)', data:rows.map(r=>r['PIB Coberto (bi)']), backgroundColor:'#2563eb'},
+      {label:'PIB em Aberto (bi)', data:rows.map(r=>r['PIB em Aberto (bi)']), backgroundColor:'#e2e8f0'},
+    ]},
+    options:{responsive:true, maintainAspectRatio:false, scales:{x:{stacked:true}, y:{stacked:true}}, plugins:{legend:{position:'bottom'}}}
+  });
+  buildTable({
+    container: sec.querySelectorAll('.card')[1],
+    rows: DATA.aproveitamento_estado,
+    searchable:true, ufFilter:false,
+    defaultSort:{key:'% Aproveit. PIB', dir:-1},
+    columns:[
+      {key:'UF', label:'UF'},
+      {key:'Franqueados', label:'Franqueados'},
+      {key:'Munic. c/ Franq.', label:'Munic. c/ Franq.'},
+      {key:'Munic. Não Abordados', label:'Não Abordados'},
+      {key:'PIB Coberto (bi)', label:'PIB Coberto', render:r=>FMT.num2(r['PIB Coberto (bi)'])},
+      {key:'PIB em Aberto (bi)', label:'PIB em Aberto', render:r=>FMT.num2(r['PIB em Aberto (bi)'])},
+      {key:'PIB Total (bi)', label:'PIB Total', render:r=>FMT.num2(r['PIB Total (bi)'])},
+      {key:'% Aproveit. PIB', label:'% Aproveitamento', render:r=>barCell(r['% Aproveit. PIB'])},
+    ]
+  });
+}
+
+/* ---------- Metodologia ---------- */
+function renderMetodologia(){
+  const sec = document.getElementById('metodologia');
+  const rows = DATA.metodologia;
+  let html = '<h2>Notas Metodológicas</h2><div class="card">';
+  let currentBlock = null;
+  rows.forEach(r=>{
+    const [a,b] = r;
+    if(a && !b){
+      if(currentBlock) html += '</table></div>';
+      html += `<div class="method-block"><h3>${a}</h3><table>`;
+      currentBlock = a;
+    } else if(a && b && currentBlock){
+      html += `<tr><td>${a}</td><td>${b}</td></tr>`;
+    } else if(a && b && !currentBlock){
+      html += `<div class="method-block"><table><tr><td>${a}</td><td>${b}</td></tr>`;
+      currentBlock = true;
+    }
+  });
+  if(currentBlock) html += '</table></div>';
+  html += '</div>';
+  sec.innerHTML = html;
+}
+</script>
+</body>
+</html>
