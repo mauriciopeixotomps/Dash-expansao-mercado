@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Expansão de Mercado — Painel da Rede</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <style>
@@ -116,6 +117,9 @@ const FMT = {
   bi: n => (n==null?'-':'R$ '+Number(n).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})+' bi'),
   num2: n => (n==null?'-':Number(n).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})),
 };
+
+Chart.register(ChartDataLabels);
+Chart.defaults.set('plugins.datalabels', {display:false});
 
 let DATA = null;
 const UFS = new Set();
@@ -304,7 +308,7 @@ function renderGeral(){
       {label:'Ativos', data:topUF.map(u=>u.Ativos), backgroundColor:'#927245'},
       {label:'Inativos', data:topUF.map(u=>u.Inativos), backgroundColor:'#828384'},
     ]},
-    options:{responsive:true, maintainAspectRatio:false, scales:{x:{stacked:true}, y:{stacked:true}}, plugins:{legend:{position:'bottom'}}}
+    options:{responsive:true, maintainAspectRatio:false, scales:{x:{stacked:true}, y:{stacked:true}}, plugins:{legend:{position:'bottom'}, datalabels:{display:ctx=>ctx.dataset.data[ctx.dataIndex]>0, color:'#fff', font:{weight:'bold'}, formatter:v=>FMT.int(v)}}}
   });
 }
 
