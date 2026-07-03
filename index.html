@@ -321,6 +321,7 @@ function renderMapa(){
       <div class="controls" style="margin-bottom:14px">
         <input type="text" id="busca-municipio" list="lista-municipios" placeholder="Buscar município...">
         <datalist id="lista-municipios">${pts.map(p=>`<option value="${p['Município']} — ${p.UF}">`).join('')}</datalist>
+        <select class="uf-select" id="filtro-uf"><option value="">Todas as UFs</option>${[...UFS].sort().map(u=>`<option value="${u}">${u}</option>`).join('')}</select>
         <span class="count" id="busca-count"></span>
       </div>
       <div id="map-rede"></div>
@@ -353,25 +354,28 @@ function renderMapa(){
       <div class="popup-row">Ativos: <b>${FMT.int(ativos)}</b> · Inativos: <b>${FMT.int(p['Inativos'])}</b> · Total: <b>${FMT.int(total)}</b></div>
       <div class="popup-row">% da rede: ${FMT.pct(p['% do Total Rede'])} · PIB 2025: ${FMT.bi(p['PIB 2025'])}</div>
     `);
-    return {marker, lat:p.lat, lon:p.lon, majorityAtivo, key: norm(`${p['Município']} ${p.UF}`)};
+    return {marker, lat:p.lat, lon:p.lon, uf:p.UF, majorityAtivo, key: norm(`${p['Município']} ${p.UF}`)};
   });
 
   const searchInput = sec.querySelector('#busca-municipio');
   const countEl = sec.querySelector('#busca-count');
   const filtroAtiva = sec.querySelector('#filtro-ativa');
   const filtroInativa = sec.querySelector('#filtro-inativa');
+  const filtroUF = sec.querySelector('#filtro-uf');
 
   function applyMapFilters(){
     const q = norm(searchInput.value.trim());
+    const uf = filtroUF.value;
     const visible = [];
     allMarkers.forEach(m=>{
       const matchesSearch = !q || m.key.includes(q);
+      const matchesUF = !uf || m.uf === uf;
       const matchesStatus = m.majorityAtivo ? filtroAtiva.checked : filtroInativa.checked;
-      const show = matchesSearch && matchesStatus;
+      const show = matchesSearch && matchesUF && matchesStatus;
       if(show){ if(!map.hasLayer(m.marker)) m.marker.addTo(map); visible.push(m); }
       else if(map.hasLayer(m.marker)) map.removeLayer(m.marker);
     });
-    if(q){
+    if(q || uf){
       countEl.textContent = `${visible.length} município(s) encontrado(s)`;
       if(visible.length===1){
         map.setView([visible[0].lat, visible[0].lon], 10);
@@ -386,6 +390,7 @@ function renderMapa(){
   }
 
   searchInput.addEventListener('input', applyMapFilters);
+  filtroUF.addEventListener('change', applyMapFilters);
   filtroAtiva.addEventListener('change', applyMapFilters);
   filtroInativa.addEventListener('change', applyMapFilters);
 }
