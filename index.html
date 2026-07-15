@@ -182,6 +182,7 @@ const TABS = [
   {id:'crescimento_geral', label:'Top 50 Crescimento'},
   {id:'pib_aberto', label:'Top 50 PIB em Aberto'},
   {id:'aproveitamento', label:'Aproveitamento por Estado'},
+  {id:'segmentos', label:'Segmentos por Região'},
   {id:'metodologia', label:'Metodologia'},
 ];
 
@@ -214,6 +215,7 @@ function init(){
   renderCrescimentoGeral();
   renderPibAberto();
   renderAproveitamento();
+  renderSegmentos();
   renderMetodologia();
 }
 
@@ -644,6 +646,61 @@ function renderAproveitamento(){
       {key:'PIB em Aberto (bi)', label:'PIB em Aberto', render:r=>FMT.num2(r['PIB em Aberto (bi)'])},
       {key:'PIB Total (bi)', label:'PIB Total', render:r=>FMT.num2(r['PIB Total (bi)'])},
       {key:'% Aproveit. PIB', label:'% Aproveitamento', render:r=>barCell(r['% Aproveit. PIB'])},
+    ]
+  });
+}
+
+/* ---------- Segmentos por Região ---------- */
+function renderSegmentos(){
+  const sec = document.getElementById('segmentos');
+  const ufs = [...new Set(DATA.segmentos_regiao.map(r=>r.UF))].sort();
+  sec.innerHTML = `
+    <h2>Segmentos Atendidos por Região</h2>
+    <p class="subtitle">${DATA.segmentos_geral.reduce((s,r)=>s+r.Clientes,0).toLocaleString('pt-BR')} clientes (CNPJs) distribuídos em ${DATA.segmentos_geral.length} segmentos e ${ufs.length} UFs.</p>
+    <div class="card"><div class="chart-box tall"><canvas id="chart-segmentos-geral"></canvas></div></div>
+    <div class="card">
+      <h2 style="font-size:15px">Segmentos por Estado</h2>
+      <div class="controls">
+        <select id="uf-segmento-select">${ufs.map(u=>`<option value="${u}">${u}</option>`).join('')}</select>
+      </div>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Segmento</th><th>Clientes</th><th>% do UF</th><th>% nacional do segmento</th></tr></thead>
+        <tbody id="tbody-segmento-uf"></tbody>
+      </table></div>
+    </div>
+    <div class="card"></div>
+  `;
+
+  new Chart(document.getElementById('chart-segmentos-geral'), {
+    type:'bar',
+    data:{labels:DATA.segmentos_geral.map(r=>r.Segmento), datasets:[
+      {label:'Clientes', data:DATA.segmentos_geral.map(r=>r.Clientes), backgroundColor:'#927245'},
+    ]},
+    options:{responsive:true, maintainAspectRatio:false, indexAxis:'y', plugins:{legend:{display:false}, datalabels:{display:true, color:'#fff', anchor:'end', align:'start', font:{weight:'bold', size:10}, formatter:v=>FMT.int(v)}}, scales:{x:{beginAtZero:true}}}
+  });
+
+  const sel = document.getElementById('uf-segmento-select');
+  function renderUF(){
+    const uf = sel.value;
+    const rows = DATA.segmentos_regiao.filter(r=>r.UF===uf).slice().sort((a,b)=>b.Clientes-a.Clientes);
+    document.getElementById('tbody-segmento-uf').innerHTML = rows.map(r=>`
+      <tr><td>${r.Segmento}</td><td>${FMT.int(r.Clientes)}</td><td>${barCell(r['% do UF'])}</td><td>${barCell(r['% do Segmento'])}</td></tr>
+    `).join('');
+  }
+  sel.addEventListener('change', renderUF);
+  renderUF();
+
+  buildTable({
+    container: sec.querySelectorAll('.card')[2],
+    rows: DATA.segmentos_regiao,
+    searchable: true, ufFilter: true,
+    defaultSort: {key:'Clientes', dir:-1},
+    columns: [
+      {key:'UF', label:'UF'},
+      {key:'Segmento', label:'Segmento'},
+      {key:'Clientes', label:'Clientes', render:r=>FMT.int(r.Clientes)},
+      {key:'% do UF', label:'% do UF', render:r=>barCell(r['% do UF'])},
+      {key:'% do Segmento', label:'% nacional do segmento', render:r=>barCell(r['% do Segmento'])},
     ]
   });
 }
