@@ -400,6 +400,7 @@ function renderMapa(){
       <div class="popup-title">${p['Município']} — ${p.UF}</div>
       <div class="popup-row">Ativos: <b>${FMT.int(ativos)}</b> · Inativos: <b>${FMT.int(p['Inativos'])}</b> · Total: <b>${FMT.int(total)}</b></div>
       <div class="popup-row">% da rede: ${FMT.pct(p['% do Total Rede'])} · PIB 2025: ${FMT.bi(p['PIB 2025'])}</div>
+      ${p['Empresas ICP']?`<div class="popup-row">Empresas ICP (50+ func.): <b>${FMT.int(p['Empresas ICP'])}</b></div>`:''}
       ${p.Clientes?`<div class="popup-row">Clientes desde 2016: <b>${FMT.int(p.Clientes)}</b>${p['Segmento Principal']?` · Segmento principal: <b>${p['Segmento Principal']}</b>`:''}</div>`:''}
       ${popupAtestado?`<div class="popup-row"><a class="atestado-link atestado-${popupAtestado.level==='município'?'muni':popupAtestado.level==='estado'?'uf':'reg'}" href="${popupAtestado.arquivo}" target="_blank">📄 ${popupAtestado.label}</a></div>`:''}
     `);
@@ -480,6 +481,7 @@ function renderCobertura(){
       {key:'% do Total Rede', label:'% da Rede', render:r=>barCell(r['% do Total Rede'])},
       {key:'% Ativos (local)', label:'% Ativos (local)', render:r=>barCell(r['% Ativos (local)'])},
       {key:'PIB 2025', label:'PIB 2025', render:r=>FMT.bi(r['PIB 2025'])},
+      {key:'Empresas ICP', label:'Empresas ICP', render:r=>r['Empresas ICP']?FMT.int(r['Empresas ICP']):'-'},
       {key:'Clientes', label:'Clientes (2016+)', render:r=>r.Clientes?FMT.int(r.Clientes):'-'},
       {key:'Segmento Principal', label:'Segmento Principal', render:r=>r['Segmento Principal']?`<span class="badge badge-ativo">${r['Segmento Principal']}</span>`:'-'},
       {key:'_atestados', label:'Atestados', render:r=>{
@@ -522,6 +524,7 @@ function renderPanorama(){
       {key:'Inativos', label:'Inativos', render:r=>`<span class="badge badge-inativo">${FMT.int(r.Inativos)}</span>`},
       {key:'% do Total Rede', label:'% da Rede', render:r=>barCell(r['% do Total Rede'])},
       {key:'% Ativos (UF)', label:'% Ativos (UF)', render:r=>barCell(r['% Ativos (UF)'])},
+      {key:'Empresas ICP', label:'Empresas ICP', render:r=>r['Empresas ICP']?FMT.int(r['Empresas ICP']):'-'},
       {key:'Clientes', label:'Clientes (2016+)', render:r=>r.Clientes?FMT.int(r.Clientes):'-'},
       {key:'Segmento Principal', label:'Segmento Principal', render:r=>r['Segmento Principal']?`<span class="badge badge-ativo">${r['Segmento Principal']}</span>`:'-'},
     ]
@@ -531,16 +534,19 @@ function renderPanorama(){
 /* ---------- Oportunidades sem franqueado ---------- */
 function renderOportunidades(){
   const sec = document.getElementById('oportunidades');
-  sec.innerHTML = `<h2>Municípios sem Franqueado</h2><p class="subtitle">Ranking por PIB 2025 — ${DATA.oportunidades.length.toLocaleString('pt-BR')} municípios sem presença da rede.</p><div class="card"></div>`;
+  sec.innerHTML = `<h2>Municípios sem Franqueado</h2><p class="subtitle">Ranking por Empresas ICP — ${DATA.oportunidades.length.toLocaleString('pt-BR')} municípios sem presença da rede.</p>
+    <div class="note-box">📊 <b>Empresas ICP</b> é uma aproximação (proxy) do perfil recomendado pela Circular GS-CIRC-PERFIL-EMPRESAS-2026-0801 (faturamento ≥ R$ 20mi, linhas X/A/L) — usa nº de empresas com 50+ funcionários por município (IBGE CEMPRE 2024), já que faturamento por CNPJ não é público. PIB do município sozinho representa mal o potencial comercial real; ver aba Metodologia.</div>
+    <div class="card"></div>`;
   buildTable({
     container: sec.querySelector('.card'),
     rows: DATA.oportunidades,
     searchable: true, ufFilter: true,
-    defaultSort: {key:'PIB 2025', dir:-1},
+    defaultSort: {key:'Empresas ICP', dir:-1},
     columns: [
       {key:'Rank', label:'#', render:r=>FMT.int(r.Rank)},
       {key:'Município', label:'Município'},
       {key:'UF', label:'UF'},
+      {key:'Empresas ICP', label:'Empresas ICP', render:r=>r['Empresas ICP']?FMT.int(r['Empresas ICP']):'-'},
       {key:'PIB 2025', label:'PIB 2025', render:r=>FMT.bi(r['PIB 2025'])},
       {key:'Cresc. 23→25', label:'Cresc. 23→25', render:r=>barCell(r['Cresc. 23→25'], r['Cresc. 23→25']>=0?'#927245':'#828384')},
       {key:'Clientes', label:'Clientes (2016+)', render:r=>r.Clientes?FMT.int(r.Clientes):'-'},
@@ -617,6 +623,7 @@ function renderPibAberto(){
       {key:'PIB 2025 (bi)', label:'PIB 2025', render:r=>FMT.num2(r['PIB 2025 (bi)'])},
       {key:'PIB 2023 (bi)', label:'PIB 2023', render:r=>FMT.num2(r['PIB 2023 (bi)'])},
       {key:'Cresc. 23→25', label:'Cresc. 23→25', render:r=>barCell(r['Cresc. 23→25'])},
+      {key:'Empresas ICP', label:'Empresas ICP', render:r=>r['Empresas ICP']?FMT.int(r['Empresas ICP']):'-'},
     ]
   });
 }
@@ -653,6 +660,7 @@ function renderAproveitamento(){
       {key:'PIB em Aberto (bi)', label:'PIB em Aberto', render:r=>FMT.num2(r['PIB em Aberto (bi)'])},
       {key:'PIB Total (bi)', label:'PIB Total', render:r=>FMT.num2(r['PIB Total (bi)'])},
       {key:'% Aproveit. PIB', label:'% Aproveitamento', render:r=>barCell(r['% Aproveit. PIB'])},
+      {key:'Empresas ICP', label:'Empresas ICP', render:r=>r['Empresas ICP']?FMT.int(r['Empresas ICP']):'-'},
       {key:'Clientes', label:'Clientes (2016+)', render:r=>r.Clientes?FMT.int(r.Clientes):'-'},
       {key:'Segmento Principal', label:'Segmento Principal', render:r=>r['Segmento Principal']?`<span class="badge badge-ativo">${r['Segmento Principal']}</span>`:'-'},
     ]
