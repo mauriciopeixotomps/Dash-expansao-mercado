@@ -539,9 +539,18 @@ function renderOportunidades(){
   const sec = document.getElementById('oportunidades');
   sec.innerHTML = `<h2>Municípios sem Franqueado</h2><p class="subtitle">Ranking por Empresas ICP — ${DATA.oportunidades.length.toLocaleString('pt-BR')} municípios sem presença da rede.</p>
     <div class="note-box">📊 <b>Empresas ICP</b> e <b>Faturamento Estimado ICP</b> aproximam o perfil recomendado pela Circular GS-CIRC-PERFIL-EMPRESAS-2026-0801 (faturamento ≥ R$ 20mi/ano, linhas X/A/L). Como a Receita Federal não divulga faturamento por CNPJ, os valores são <b>estimados por modelo estatístico</b> (IBGE CEMPRE 2022 × produtividade setorial IBGE PIA/PAC/PAS 2022) — não são faturamento real declarado. PIB do município sozinho representa mal o potencial comercial real; ver aba Metodologia para detalhes e nível de confiança por município.</div>
+    <div class="card">
+      <h2 style="font-size:15px">Empresas e Faturamento ICP por Região</h2>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Região</th><th>Empresas X</th><th>Empresas A</th><th>Empresas L</th><th>Total ICP</th><th>Faturamento Estimado</th><th>% Empresas</th><th>% Faturamento</th></tr></thead>
+        <tbody>${DATA.resumo_regional_icp.map(r=>`
+          <tr><td>${r['Região']}</td><td>${FMT.int(r['Empresas X'])}</td><td>${FMT.int(r['Empresas A'])}</td><td>${FMT.int(r['Empresas L'])}</td><td><b>${FMT.int(r['Empresas ICP'])}</b></td><td><b>${FMT.bi(r['Faturamento Estimado ICP']/1e9)}</b></td><td>${barCell(r['% Empresas ICP'])}</td><td>${barCell(r['% Faturamento'])}</td></tr>
+        `).join('')}</tbody>
+      </table></div>
+    </div>
     <div class="card"></div>`;
   buildTable({
-    container: sec.querySelector('.card'),
+    container: sec.querySelectorAll('.card')[1],
     rows: DATA.oportunidades,
     searchable: true, ufFilter: true,
     defaultSort: {key:'Empresas ICP', dir:-1},
