@@ -99,6 +99,9 @@
   .leaflet-popup-content-wrapper{border-radius:8px;}
   .popup-title{font-weight:700;margin-bottom:4px;color:var(--taupe);}
   .popup-row{font-size:12.5px;color:var(--text-mut);}
+  .popup-franq-list{max-height:170px;overflow-y:auto;margin-top:6px;padding-top:6px;border-top:1px solid var(--border);}
+  .popup-franq-row{font-size:12px;padding:2px 0;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .popup-franq-row .dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:5px;vertical-align:middle;flex-shrink:0;}
 </style>
 </head>
 <body>
@@ -406,14 +409,16 @@ function renderMapa(){
       fillOpacity:.82,
     }).addTo(map);
     const popupAtestado = atestadoLink(p['Município'], p.UF);
+    const franqueados = p.Franqueados || [];
     marker.bindPopup(`
       <div class="popup-title">${p['Município']} — ${p.UF}</div>
       <div class="popup-row">Ativos: <b>${FMT.int(ativos)}</b> · Inativos: <b>${FMT.int(p['Inativos'])}</b> · Total: <b>${FMT.int(total)}</b></div>
       <div class="popup-row">% da rede: ${FMT.pct(p['% do Total Rede'])} · PIB 2025: ${FMT.bi(p['PIB 2025'])}</div>
       ${p['Empresas ICP']?`<div class="popup-row">Empresas ICP: <b>${FMT.int(p['Empresas ICP'])}</b> · Faturamento estimado: <b>${FMT.bi(p['Faturamento Estimado ICP']/1e9)}</b></div>`:''}
       ${p.Clientes?`<div class="popup-row">Clientes desde 2016: <b>${FMT.int(p.Clientes)}</b>${p['Segmento Principal']?` · Segmento principal: <b>${p['Segmento Principal']}</b>`:''}</div>`:''}
+      ${franqueados.length?`<div class="popup-franq-list">${franqueados.map(f=>`<div class="popup-franq-row"><span class="dot" style="background:${f.status==='ATIVO'?'#927245':'#828384'}"></span><b>${f.franqueado}</b> <span style="color:var(--text-mut)">— ${f.modelo}</span></div>`).join('')}</div>`:''}
       ${popupAtestado?`<div class="popup-row"><a class="atestado-link atestado-${popupAtestado.level==='município'?'muni':popupAtestado.level==='estado'?'uf':'reg'}" href="${popupAtestado.arquivo}" target="_blank">📄 ${popupAtestado.label}</a></div>`:''}
-    `);
+    `, {maxWidth: 340});
     return {marker, lat:p.lat, lon:p.lon, uf:p.UF, municipio:p['Município'], majorityAtivo, key: norm(`${p['Município']} ${p.UF}`)};
   });
 
